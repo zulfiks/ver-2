@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Models\Screening;
 
 class FoodLogController extends Controller
 {
@@ -91,10 +92,16 @@ class FoodLogController extends Controller
             $reminder = "$firstName, coba majukan jam makan malammu sebelum jam 19.00 agar tidurmu lebih nyenyak.";
         }
 
-        return response()->json([
-            'success' => true,
-            'alert_message' => $alert,
-            'reminder_message' => $reminder
-        ]);
+        $latestScreening = Screening::latest()->first();
+
+return response()->json([
+    'success' => true,
+
+    'alert_message' => $alert,
+    'reminder_message' => $reminder,
+
+    // AI PLAN
+    'latest_screening' => $latestScreening,
+]);
     }
 }

@@ -9,9 +9,24 @@ class Screening extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'weight', 'height', 'gender', 'waist', 'sarc_f_score', 
-        'imt_value', 'imt_classification', 'risk_level', 
-        'central_obesity_status', 'sarcopenia_status'
-    ];
+protected $fillable = [
+
+    'weight',
+    'height',
+    'waist',
+    'age',
+    'gender',
+
+    'imt_value',
+    'imt_classification',
+
+    'risk_level',
+    'central_obesity_status',
+
+    // AI PLAN
+    'weekly_target',
+    'activity_target',
+    'food_recommendation',
+    'habit_recommendation',
+];
 }

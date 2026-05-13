@@ -19,7 +19,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _totalKaloriHariIni = 0;
   List<dynamic> _riwayatMakanan = [];
   bool _isLoadingLogs = true;
-  
+  Map<String, dynamic>? _latestScreening;
+
   // Variabel pesan AI yang sekarang akan kita buat dinamis
   String _aiSmartMessage = "Menganalisis pola makanmu...";
 
@@ -34,64 +35,110 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _handleProtectedNavigation(Widget targetScreen) {
+  void _handleProtectedNavigation(Widget targetScreen) async {
     if (widget.userData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Wajib Login untuk akses fitur ini!"), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text("Wajib Login untuk akses fitur ini!"),
+          backgroundColor: Colors.orange,
+        ),
       );
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-    } else {
+
       Navigator.push(
-        context, 
-        MaterialPageRoute(builder: (context) => targetScreen)
-      ).then((result) {
-        if (result != null && result is Map<String, dynamic>) {
-          setState(() {
-            widget.userData!['klasifikasi_risiko'] = result['imt_classification'];
-            _fetchDashboardData();
-          });
-        }
-      });
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    } else {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => targetScreen),
+      );
+
+      // =========================
+      // REFRESH DASHBOARD
+      // =========================
+
+      await _fetchDashboardData();
+
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
   Future<void> _fetchDashboardData() async {
     if (widget.userData == null) return;
+
     setState(() => _isLoadingLogs = true);
+
     final int userId = widget.userData!['id'];
 
     try {
       final logData = await ApiService.getTodayFoodLogs(userId);
-      final response = await http.get(Uri.parse('${ApiService.baseUrl}/analysis/$userId'));
-      
+
+      final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/analysis/$userId'),
+      );
+
+      Map<String, dynamic>? screeningData;
+
+      String alertMessage = "";
+      String reminderMessage = "";
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        alertMessage = data['alert_message'] ?? "";
+        reminderMessage = data['reminder_message'] ?? "";
+
+        // =========================
+        // AMBIL SCREENING TERBARU
+        // =========================
+
+        screeningData = data['latest_screening'];
+      }
+
       if (mounted) {
         setState(() {
+          // =========================
+          // FOOD LOG
+          // =========================
+
           if (logData != null && logData['success'] == true) {
-            _totalKaloriHariIni = int.tryParse(logData['total_kalori'].toString()) ?? 0;
+            _totalKaloriHariIni =
+                int.tryParse(logData['total_kalori'].toString()) ?? 0;
+
             _riwayatMakanan = logData['logs'];
           }
 
-          // --- LOGIKA OBESITY RISK ALERT DINAMIS (EDIT DI SINI) ---
+          // =========================
+          // SCREENING AI PLAN
+          // =========================
+
+          _latestScreening = screeningData;
+
+          // =========================
+          // SMART MESSAGE
+          // =========================
+
           if (_totalKaloriHariIni > 1800) {
-            // Peringatan jika kalori berlebih (Suportif)
-            _aiSmartMessage = "Asupan kalori hari ini sudah melampaui target. Yuk, coba jalan kaki santai sore nanti agar tubuh tetap bugar!";
-          } else if (response.statusCode == 200) {
-            final res = jsonDecode(response.body);
-            // Jika ada pesan spesifik dari backend (misal: "Anda makan minuman manis 4x")
-            _aiSmartMessage = (res['alert_message'] != null && res['alert_message'].isNotEmpty)
-                ? res['alert_message']
-                : (res['reminder_message'] ?? "Pola makanmu sudah cukup baik hari ini, pertahankan!");
+            _aiSmartMessage = "Asupan kalori hari ini sudah melampaui target.";
+          } else if (alertMessage.isNotEmpty) {
+            _aiSmartMessage = alertMessage;
           } else {
-            _aiSmartMessage = "Tetap semangat jaga pola makan sehatmu hari ini!";
+            _aiSmartMessage = reminderMessage.isNotEmpty
+                ? reminderMessage
+                : "Pola makanmu sudah cukup baik hari ini.";
           }
-          
+
           _isLoadingLogs = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _aiSmartMessage = "Gagal memuat analisis, namun yuk tetap jaga porsi makanmu.";
+          _aiSmartMessage = "Gagal memuat analisis kesehatan.";
+
           _isLoadingLogs = false;
         });
       }
@@ -110,7 +157,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: const Color(0xFF10B981).withOpacity(0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
-          )
+          ),
         ],
       ),
       child: child,
@@ -124,7 +171,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Icon(icon, color: const Color(0xFF10B981)),
           ),
           const SizedBox(width: 16),
@@ -132,11 +182,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF374151), fontSize: 14)),
-                Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF374151),
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -146,21 +206,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     bool isLoggedIn = widget.userData != null;
     String userName = isLoggedIn ? widget.userData!['name'] : 'Tamu';
-    String klasifikasiRisiko = isLoggedIn ? (widget.userData!['klasifikasi_risiko'] ?? 'Belum Dianalisis') : 'Login untuk Cek Risiko';
-    
+    String klasifikasiRisiko = isLoggedIn
+        ? (widget.userData!['klasifikasi_risiko'] ?? 'Belum Dianalisis')
+        : 'Login untuk Cek Risiko';
+
     int targetKalori = 1800; // Target kalori default [cite: 575]
     double progressKalori = _totalKaloriHariIni / targetKalori;
     if (progressKalori > 1.0) progressKalori = 1.0;
 
-    Color cardRisikoColor = klasifikasiRisiko.contains('Tinggi') || klasifikasiRisiko.contains('II') ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB);
-    Color iconRisikoColor = klasifikasiRisiko.contains('Tinggi') || klasifikasiRisiko.contains('II') ? const Color(0xFFEF4444) : const Color(0xFFF59E0B);
+    Color cardRisikoColor =
+        klasifikasiRisiko.contains('Tinggi') || klasifikasiRisiko.contains('II')
+        ? const Color(0xFFFEF2F2)
+        : const Color(0xFFFFFBEB);
+    Color iconRisikoColor =
+        klasifikasiRisiko.contains('Tinggi') || klasifikasiRisiko.contains('II')
+        ? const Color(0xFFEF4444)
+        : const Color(0xFFF59E0B);
 
-    // AI PERSONAL WEIGHT LOSS PLAN (Target, Aktivitas, Menu Lokal, Habit) 
-    String targetMingguan = "Turun 0.5 - 1 kg secara aman";
-    String aktivitasTarget = "Jalan kaki 20-30 menit";
-    String menuLokal = "Nasi Merah, Pepes Ikan, & Sayur Asem";
-    String habitKecil = "Makan malam sebelum jam 8";
+    // AI PERSONAL WEIGHT LOSS PLAN (Target, Aktivitas, Menu Lokal, Habit)
+    String targetMingguan =
+        _latestScreening?['weekly_target'] ?? 'Belum ada rekomendasi';
 
+    String aktivitasTarget =
+        _latestScreening?['activity_target'] ?? 'Belum ada rekomendasi';
+
+    String menuLokal =
+        _latestScreening?['food_recommendation'] ?? 'Belum ada rekomendasi';
+
+    String habitKecil =
+        _latestScreening?['habit_recommendation'] ?? 'Belum ada rekomendasi';
     if (klasifikasiRisiko == "Normal") {
       targetMingguan = "Pertahankan berat badan ideal";
       aktivitasTarget = "Olahraga intensitas sedang 30 menit [cite: 685]";
@@ -181,12 +255,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Halo, $userName ✨', style: const TextStyle(color: Color(0xFF064E3B), fontSize: 20, fontWeight: FontWeight.w800)),
+            Text(
+              'Halo, $userName ✨',
+              style: const TextStyle(
+                color: Color(0xFF064E3B),
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
             SizedBox(
               width: MediaQuery.of(context).size.width * 0.75,
-              child: Text(_aiSmartMessage,
-                  style: const TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.w600),
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
+              child: Text(
+                _aiSmartMessage,
+                style: const TextStyle(
+                  color: Color(0xFF10B981),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -194,8 +282,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (!isLoggedIn)
             IconButton(
               icon: const Icon(Icons.login, color: Color(0xFF10B981)),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen())),
-            )
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+              ),
+            ),
         ],
       ),
       body: RefreshIndicator(
@@ -212,18 +303,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   bgColor: const Color(0xFF064E3B),
                   child: Row(
                     children: [
-                      const Icon(Icons.health_and_safety, color: Colors.white, size: 40),
+                      const Icon(
+                        Icons.health_and_safety,
+                        color: Colors.white,
+                        size: 40,
+                      ),
                       const SizedBox(width: 16),
                       const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Skrining Obesitas', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                            Text('Berdasarkan KMK No. 509 Tahun 2025', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            Text(
+                              'Skrining Obesitas',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            Text(
+                              'Berdasarkan KMK No. 509 Tahun 2025',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                     ],
                   ),
                 ),
@@ -239,8 +351,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(klasifikasiRisiko, style: TextStyle(color: iconRisikoColor, fontWeight: FontWeight.w800, fontSize: 16)),
-                          const Text('Berdasarkan data kesehatanmu', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          Text(
+                            klasifikasiRisiko,
+                            style: TextStyle(
+                              color: iconRisikoColor,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const Text(
+                            'Berdasarkan data kesehatanmu',
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
                         ],
                       ),
                     ),
@@ -255,15 +377,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Personal Plan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF064E3B))),
-                        Chip(label: Text('Minggu 1', style: TextStyle(color: Colors.white, fontSize: 12)), backgroundColor: Color(0xFF10B981), side: BorderSide.none),
+                        Text(
+                          'Personal Plan',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF064E3B),
+                          ),
+                        ),
+                        Chip(
+                          label: Text(
+                            'Minggu 1',
+                            style: TextStyle(color: Colors.white, fontSize: 12),
+                          ),
+                          backgroundColor: Color(0xFF10B981),
+                          side: BorderSide.none,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    _buildPlanItem(Icons.track_changes, 'Target Mingguan', targetMingguan),
-                    _buildPlanItem(Icons.directions_walk, 'Target Aktivitas', aktivitasTarget),
-                    _buildPlanItem(Icons.restaurant, 'Rekomendasi Menu Lokal', menuLokal),
-                    _buildPlanItem(Icons.tips_and_updates, 'Kebiasaan Baru', habitKecil),
+                    _buildPlanItem(
+                      Icons.track_changes,
+                      'Target Mingguan',
+                      targetMingguan,
+                    ),
+                    _buildPlanItem(
+                      Icons.directions_walk,
+                      'Target Aktivitas',
+                      aktivitasTarget,
+                    ),
+                    _buildPlanItem(
+                      Icons.restaurant,
+                      'Rekomendasi Menu Lokal',
+                      menuLokal,
+                    ),
+                    _buildPlanItem(
+                      Icons.tips_and_updates,
+                      'Kebiasaan Baru',
+                      habitKecil,
+                    ),
                   ],
                 ),
               ),
@@ -272,12 +424,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Kalori Hari Ini', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF064E3B))),
+                    const Text(
+                      'Kalori Hari Ini',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF064E3B),
+                      ),
+                    ),
                     const SizedBox(height: 16),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text('$_totalKaloriHariIni kkal', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-                      Text('/ $targetKalori kkal', style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.w600)),
-                    ]),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '$_totalKaloriHariIni kkal',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                        Text(
+                          '/ $targetKalori kkal',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
@@ -285,38 +460,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         value: progressKalori,
                         minHeight: 12,
                         backgroundColor: const Color(0xFFECFDF5),
-                        valueColor: AlwaysStoppedAnimation<Color>(_totalKaloriHariIni > targetKalori ? Colors.red : const Color(0xFF10B981))
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          _totalKaloriHariIni > targetKalori
+                              ? Colors.red
+                              : const Color(0xFF10B981),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text('Catatan Makanan', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    const Text(
+                      'Catatan Makanan',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     _isLoadingLogs
-                        ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF10B981),
+                            ),
+                          )
                         : _riwayatMakanan.isEmpty
-                            ? const Text('Belum ada makanan dicatat.', style: TextStyle(color: Colors.grey))
-                            : Column(
-                                children: _riwayatMakanan.map((log) => Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(12)),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(log['food_name'] ?? 'Makanan', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                      Text('${log['total_calories']} kkal', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
-                                    ],
+                        ? const Text(
+                            'Belum ada makanan dicatat.',
+                            style: TextStyle(color: Colors.grey),
+                          )
+                        : Column(
+                            children: _riwayatMakanan
+                                .map(
+                                  (log) => Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF9FAFB),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          log['food_name'] ?? 'Makanan',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${log['total_calories']} kkal',
+                                          style: const TextStyle(
+                                            color: Color(0xFF10B981),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                )).toList(),
-                              ),
+                                )
+                                .toList(),
+                          ),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: () => _handleProtectedNavigation(FoodSearchScreen(userId: isLoggedIn ? widget.userData!['id'] : 0)),
-                        icon: const Icon(Icons.search, color: Color(0xFF10B981)),
-                        label: const Text('Cari & Tambah Makanan', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
-                        style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFF10B981)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                        onPressed: () => _handleProtectedNavigation(
+                          FoodSearchScreen(
+                            userId: isLoggedIn ? widget.userData!['id'] : 0,
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.search,
+                          color: Color(0xFF10B981),
+                        ),
+                        label: const Text(
+                          'Cari & Tambah Makanan',
+                          style: TextStyle(
+                            color: Color(0xFF10B981),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFF10B981)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -328,10 +558,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _handleProtectedNavigation(const Placeholder()), 
+        onPressed: () => _handleProtectedNavigation(const Placeholder()),
         backgroundColor: const Color(0xFF064E3B),
         icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-        label: const Text('Chat AI Healthify', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text(
+          'Chat AI Healthify',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );

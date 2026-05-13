@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 class ApiService {
   // Gunakan 10.0.2.2 untuk Emulator Android. 
   // Jika pakai HP Fisik, ganti dengan IP WiFi laptopmu (misal: 192.168.1.10)
-  static const String baseUrl = 'http://10.111.10.161:8000/api';
+  static const String baseUrl = 'http://127.0.0.1:8000/api';
 
   // Ubah parameternya menjadi seperti ini
   static Future<Map<String, dynamic>> registerUser(
