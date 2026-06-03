@@ -1,27 +1,84 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart'; // FIX: Ditambahkan agar kIsWeb tidak lagi 'Undefined name'
 
 class ApiService {
-  // Gunakan 10.0.2.2 untuk Emulator Android. 
-  // Jika pakai HP Fisik, ganti dengan IP WiFi laptopmu (misal: 192.168.1.10)
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  // GANTI: Menggunakan URL Ngrok aktifmu agar HP fisik bisa menembak database laptop lewat internet
+  static const String baseUrl = 'https://taenidial-lipogrammatic-antony.';
 
-  // Ubah parameternya menjadi seperti ini
+  // Fungsi Ambil Top 3 Leaderboard Riil
+  static Future<List<dynamic>> getTopLeaderboard() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/leaderboard/top'),
+        headers: {'Accept': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+        return responseBody['leaderboard'] ?? [];
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print("Error fetching leaderboard: $e");
+      return [];
+    }
+  }
+
+  // Fungsi Upload Foto Profil Hybrid
+  static Future<String?> uploadProfilePicture(int userId, dynamic pickedFile) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/user/$userId/upload-profile-picture'),
+      );
+
+      if (kIsWeb) {
+        var bytes = await pickedFile.readAsBytes();
+        request.files.add(http.MultipartFile.fromBytes(
+          'image',
+          bytes,
+          filename: pickedFile.name,
+        ));
+      } else {
+        request.files.add(await http.MultipartFile.fromPath(
+          'image',
+          pickedFile.path,
+        ));
+      }
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return data['profile_picture_url'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print("Error upload API: $e"); // FIX: Menggunakan print biasa agar tidak memicu undefined_method
+      return null;
+    }
+  }
+
+  // Fungsi Register Asli
   static Future<Map<String, dynamic>> registerUser(
       String name, 
       String email, 
       String password, 
       Map<String, String> healthData) async {
     try {
-      // Gabungkan data user dan data kesehatan menjadi satu JSON
       final Map<String, dynamic> requestBody = {
         'name': name,
         'email': email,
         'password': password,
       };
-      requestBody.addAll(healthData); // Memasukkan semua data form kesehatan
+      requestBody.addAll(healthData);
 
-      final response = await http.post(
+    final response = await http.post(
         Uri.parse('$baseUrl/register'),
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: jsonEncode(requestBody),
@@ -36,7 +93,9 @@ class ApiService {
       return {'success': false, 'message': 'Terjadi kesalahan jaringan: $e'};
     }
   }
-static Future<Map<String, dynamic>> loginUser(String email, String password) async {
+
+  // Fungsi Login Asli
+  static Future<Map<String, dynamic>> loginUser(String email, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
@@ -64,7 +123,7 @@ static Future<Map<String, dynamic>> loginUser(String email, String password) asy
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
-        return responseBody['data']; // Mengembalikan array data makanan
+        return responseBody['data'];
       } else {
         return [];
       }
@@ -73,6 +132,7 @@ static Future<Map<String, dynamic>> loginUser(String email, String password) asy
       return [];
     }
   }
+
   // Fungsi Simpan Jurnal
   static Future<bool> saveFoodLog(int userId, int foodId, double porsi, int totalKalori) async {
     try {
@@ -92,7 +152,7 @@ static Future<Map<String, dynamic>> loginUser(String email, String password) asy
     }
   }
 
-  // Fungsi Ambil Data Hari Ini
+  // Fungsi Ambil Data Hari Ini (FIX: Menyesuaikan route bawaan Laravelmu: /api/food-logs/today/{id})
   static Future<Map<String, dynamic>?> getTodayFoodLogs(int userId) async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/food-logs/today/$userId'));
@@ -101,8 +161,8 @@ static Future<Map<String, dynamic>> loginUser(String email, String password) asy
       }
       return null;
     } catch (e) {
+      print("Error fetching today food logs: $e");
       return null;
     }
   }
-  // Nanti fungsi login ditambahkan di sini
 }

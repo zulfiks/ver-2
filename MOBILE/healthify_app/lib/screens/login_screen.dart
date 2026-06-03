@@ -11,26 +11,16 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController =
-      TextEditingController();
-
-  final TextEditingController _passwordController =
-      TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // ================= LOGIN =================
+  // ================= ACTION LOGIN (TIDAK BERUBAH) =================
   void _handleLogin() async {
-    if (_emailController.text.isEmpty ||
-        _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Email dan Password tidak boleh kosong'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showSnackBar('Email dan Password tidak boleh kosong', Colors.red);
       return;
     }
 
@@ -49,71 +39,19 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) =>
-              DashboardScreen(userData: result['data']),
+          builder: (context) => DashboardScreen(userData: result['data']),
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar(result['message'], Colors.red);
     }
   }
 
-  // ================= INPUT FIELD =================
-  Widget _buildInputField({
-    required String hint,
-    required IconData icon,
-    bool isPassword = false,
-  }) {
-    return Container(
-      height: 58,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F7F6),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: TextField(
-        controller:
-            isPassword ? _passwordController : _emailController,
-        obscureText: isPassword ? _obscurePassword : false,
-        style: const TextStyle(
-          color: Color(0xFF305F56),
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-        ),
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 18),
-          hintText: hint,
-          hintStyle: const TextStyle(
-            color: Color(0xFF9AA8A4),
-            fontSize: 14,
-          ),
-          prefixIcon: Icon(
-            icon,
-            color: const Color(0xFF6DB7A8),
-          ),
-          suffixIcon: isPassword
-              ? IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _obscurePassword =
-                          !_obscurePassword;
-                    });
-                  },
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: Colors.grey,
-                  ),
-                )
-              : null,
-        ),
+  void _showSnackBar(String message, Color backgroundColor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
       ),
     );
   }
@@ -121,261 +59,206 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEAF7F2),
-      body: Stack(
-        children: [
-          // ================= BACKGROUND ORB =================
-          Positioned(
-            top: -120,
-            right: -80,
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                color:
-                    const Color(0xFFBEE5DB).withOpacity(0.4),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
+      backgroundColor: const Color(0xFF63C1C2), // Warna fallback tema l1.png
+      body: SafeArea(
+        top: false, // Membiarkan background gambar naik penuh sampai status bar atas
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double maxHeight = constraints.maxHeight;
 
-          Positioned(
-            top: 120,
-            left: -70,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                color:
-                    const Color(0xFFD8EEE8).withOpacity(0.5),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-
-          SafeArea(
-            child: SingleChildScrollView(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-
-                  // ================= HERO AREA =================
-                  Container(
-                    width: double.infinity,
-                    height: 280,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF6DB7A8),
-                          Color(0xFF8AD3C2),
-                        ],
+            return Stack(
+              children: [
+                // 1. BACKGROUND IMAGE UTAMA (Mengunci porsi atas layar)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: maxHeight * 0.58, // Sesuai porsi ruang l1.png agar karakter orang berlari terlihat jelas
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/l1.png'),
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
                       ),
-                      borderRadius:
-                          BorderRadius.circular(36),
-                    ),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          top: 30,
-                          right: 30,
-                          child: Icon(
-                            Icons.favorite_rounded,
-                            color: Colors.white
-                                .withOpacity(0.15),
-                            size: 90,
-                          ),
-                        ),
-
-                        Positioned(
-                          bottom: 40,
-                          left: 30,
-                          right: 30,
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                'Welcome\nBack 👋',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 38,
-                                  fontWeight:
-                                      FontWeight.w800,
-                                  height: 1.1,
-                                ),
-                              ),
-
-                              SizedBox(height: 12),
-
-                              Text(
-                                'Track your healthy lifestyle\nwith Healthify.',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 15,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 30),
-
-                  // ================= LOGIN CARD =================
-                  Container(
+                // 2. FORM KONTEN LOGIN (Fix Terkunci, Anti-Scroll)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(28),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(32),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              Colors.black.withOpacity(0.04),
-                          blurRadius: 30,
-                          offset: const Offset(0, 15),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(32),
+                        topRight: Radius.circular(32),
+                      ),
+                    ),
+                    padding: const EdgeInsets.only(
+                      left: 24,
+                      right: 24,
+                      top: 28, // Sedikit diperpendek jarak atasnya agar padat
+                      bottom: 24,
                     ),
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Center(
-                          child: Text(
-                            'Login',
-                            style: TextStyle(
-                              color: Color(0xFF305F56),
-                              fontSize: 30,
-                              fontWeight: FontWeight.w800,
-                            ),
+                        // Judul Aplikasi (Warna Khas Hijau Gelap l2.png)
+                        const Text(
+                          'Healthify⁺',
+                          style: TextStyle(
+                            color: Color(0xFF143C3D),
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
                           ),
                         ),
-
-                        const SizedBox(height: 10),
-
-                        const Center(
-                          child: Text(
-                            'Your journey starts here',
-                            style: TextStyle(
-                              color: Color(0xFF8A9A96),
-                              fontSize: 14,
-                            ),
+                        const Text(
+                          'Sign In',
+                          style: TextStyle(
+                            color: Color(0xFF143C3D),
+                            fontSize: 38,
+                            fontWeight: FontWeight.w900,
+                            height: 1.0,
                           ),
                         ),
+                        const SizedBox(height: 20), // Jarak dipendekkan agar fit
 
-                        const SizedBox(height: 34),
-
+                        // Input Field Email
                         const Text(
                           'Email',
                           style: TextStyle(
-                            color: Color(0xFF305F56),
+                            color: Color(0xFF143C3D),
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-
-                        const SizedBox(height: 10),
-
-                        _buildInputField(
-                          hint: 'Enter your email',
-                          icon: Icons.email_outlined,
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 50, // Tinggi input dikurangi sedikit demi efisiensi ruang
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F3F4),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: TextField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            style: const TextStyle(
+                              color: Color(0xFF143C3D),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Enter your email',
+                              hintStyle: TextStyle(color: Colors.black26, fontSize: 14),
+                              contentPadding: EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
                         ),
+                        const SizedBox(height: 14),
 
-                        const SizedBox(height: 22),
-
+                        // Input Field Password
                         const Text(
                           'Password',
                           style: TextStyle(
-                            color: Color(0xFF305F56),
+                            color: Color(0xFF143C3D),
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-
-                        const SizedBox(height: 10),
-
-                        _buildInputField(
-                          hint: 'Enter your password',
-                          icon: Icons.lock_outline_rounded,
-                          isPassword: true,
-                        ),
-
-                        const SizedBox(height: 14),
-
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {},
-                            child: const Text(
-                              'Forgot password?',
-                              style: TextStyle(
-                                color: Color(0xFF6DB7A8),
-                                fontWeight: FontWeight.w700,
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F3F4),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: TextField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            style: const TextStyle(
+                              color: Color(0xFF143C3D),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Enter your password',
+                              hintStyle: const TextStyle(color: Colors.black26, fontSize: 14),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                              suffixIcon: IconButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: Colors.black38,
+                                  size: 20,
+                                ),
                               ),
                             ),
                           ),
                         ),
+                        const SizedBox(height: 28), // Diperpendek agar pas mengunci layar
 
-                        const SizedBox(height: 10),
-
-                        // ================= LOGIN BUTTON =================
+                        // Tombol Sign In Solid Teal Khas l2.png
                         SizedBox(
                           width: double.infinity,
-                          height: 58,
+                          height: 52,
                           child: ElevatedButton(
-                            onPressed:
-                                _isLoading ? null : _handleLogin,
+                            onPressed: _isLoading ? null : _handleLogin,
                             style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4FA0A1), // Hex teal akurat tombol l2.png
+                              foregroundColor: Colors.white,
                               elevation: 0,
-                              backgroundColor:
-                                  const Color(0xFF4C8C7D),
-                              shape:
-                                  RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(
-                                        18),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                             child: _isLoading
                                 ? const SizedBox(
                                     width: 22,
                                     height: 22,
-                                    child:
-                                        CircularProgressIndicator(
+                                    child: CircularProgressIndicator(
                                       color: Colors.white,
                                       strokeWidth: 2.5,
                                     ),
                                   )
                                 : const Text(
-                                    'Login',
+                                    'Sign In',
                                     style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight:
-                                          FontWeight.w700,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                           ),
                         ),
+                        const SizedBox(height: 18),
 
-                        const SizedBox(height: 28),
-
-                        // ================= REGISTER =================
+                        // Link Menuju Register Screen (DIPERTAHANKAN UTUH & WARNA DISESUAIKAN)
                         Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Text(
                               "Don't have an account? ",
                               style: TextStyle(
-                                color: Color(0xFF8A9A96),
+                                color: Color(0xFF143C3D),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             GestureDetector(
@@ -383,17 +266,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        const RegisterScreen(),
+                                    builder: (context) => const RegisterScreen(),
                                   ),
                                 );
                               },
                               child: const Text(
                                 'Create one!',
                                 style: TextStyle(
-                                  color: Color(0xFF4C8C7D),
-                                  fontWeight:
-                                      FontWeight.bold,
+                                  color: Color(0xFF143C3D),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
@@ -402,13 +284,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
-          ),
-        ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

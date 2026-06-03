@@ -34,7 +34,7 @@ class _ScreeningPageState extends State<ScreeningPage> {
   String _fatigue = '';
 
   // CONDITIONS
-  List<String> _conditions = [];
+  final List<String> _conditions = [];
 
   bool _isSubmitting = false;
 
@@ -555,7 +555,7 @@ class _ScreeningPageState extends State<ScreeningPage> {
 
                   DropdownButtonFormField<String>(
 
-                    value: _gender,
+                    initialValue: _gender,
 
                     decoration: InputDecoration(
                       labelText: "Jenis Kelamin",

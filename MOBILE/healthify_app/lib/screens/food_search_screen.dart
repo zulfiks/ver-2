@@ -168,9 +168,9 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   }
 
   Widget _buildFoodCard(Map<String, dynamic> food) {
-    String nama = food['name']?.toString() ?? 'Makanan';
-    String kkal = food['calories']?.toString() ?? '0';
-    String porsi = food['serving_size']?.toString() ?? '1 Porsi';
+    String nama = food['nama_makanan']?.toString() ?? 'Makanan';
+    String kkal = food['kalori_standar']?.toString() ?? '0';
+    String porsi = food['satuan_standar']?.toString() ?? '1 Porsi';
     
     String label = "Tinggi Protein";
     if (nama.toLowerCase().contains("pecel")) label = "Tinggi Serat";
@@ -294,7 +294,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
               ],
             ),
           ),
-          SizedBox(width: 10),
+          const SizedBox(width: 10),
           Icon(Icons.lightbulb_circle, color: Colors.white, size: 40),
         ],
       ),
@@ -303,9 +303,9 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
 
   void _showPortionCalculator(Map<String, dynamic> food) {
     double selectedPortion = 1.0;
-    String namaMakanan = food['name']?.toString() ?? 'Makanan Tidak Diketahui';
-    int kaloriStandar = int.tryParse(food['calories']?.toString() ?? '0') ?? 0;
-    String satuanStandar = food['serving_size']?.toString() ?? 'Porsi';
+    String namaMakanan = food['nama_makanan']?.toString() ?? 'Makanan Tidak Diketahui';
+    int kaloriStandar = int.tryParse(food['kalori_standar']?.toString() ?? '0') ?? 0;
+    String satuanStandar = food['satuan_standar']?.toString() ?? 'Porsi';
 
     showModalBottomSheet(
       context: context,
@@ -416,6 +416,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                   height: 56,
                   child: ElevatedButton(
                     onPressed: () async {
+                      // 1. Tampilkan Loading Indicator
                       showDialog(
                           context: context,
                           barrierDismissible: false,
@@ -423,6 +424,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                               child: CircularProgressIndicator(
                                   color: Color(0xFF10B981))));
 
+                      // 2. Jalankan fungsi API
                       bool isSuccess = await ApiService.saveFoodLog(
                           widget.userId,
                           food['id'],
@@ -430,15 +432,30 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                           totalCalories);
 
                       if (!context.mounted) return;
-                      Navigator.pop(context);
+                      
+                      // 3. TUTUP LOADING DIALOG (Baik sukses atau gagal, loading harus ditutup)
+                      Navigator.pop(context); 
 
                       if (isSuccess) {
-                        Navigator.pop(context);
-                        Navigator.pop(context, true);
+                        // 4. TUTUP BOTTOM SHEET KALKULATOR PORSI
+                        Navigator.pop(context); 
+
+                        // 5. Tampilkan snackbar sukses
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text('Berhasil mencatat $namaMakanan!'),
-                              backgroundColor: Colors.green),
+                            content: Text('Berhasil mencatat $namaMakanan! ✨'),
+                            backgroundColor: const Color(0xFF10B981),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      } else {
+                        // 6. Tampilkan snackbar gagal jika API bermasalah
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Gagal menyimpan ke jurnal. Coba lagi! ❌'),
+                            backgroundColor: Colors.red,
+                            duration: Duration(seconds: 2),
+                          ),
                         );
                       }
                     },
