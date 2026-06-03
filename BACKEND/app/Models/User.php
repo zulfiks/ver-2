@@ -9,6 +9,11 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
+    public function foodLogs()
+{
+    return $this->hasMany(FoodLog::class, 'user_id'); // Sesuaikan dengan nama model Jurnal Makananmu
+}
+
     use HasFactory, Notifiable;
 
     /**

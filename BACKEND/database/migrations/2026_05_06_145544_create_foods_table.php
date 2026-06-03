@@ -13,6 +13,7 @@ public function up(): void
 {
     Schema::create('foods', function (Blueprint $table) {
         $table->id();
+        $table->string('whatsapp_number');
         $table->string('nama_makanan'); // Pastikan tulisannya begini
         $table->integer('kalori_standar'); 
         $table->string('satuan_standar'); 

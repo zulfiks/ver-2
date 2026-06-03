@@ -22,6 +22,8 @@ protected $fillable = [
 
     'risk_level',
     'central_obesity_status',
+    'sarc_f_score',
+    'sarcopenia_status',
 
     // AI PLAN
     'weekly_target',

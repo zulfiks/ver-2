@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage; // Ditambahkan untuk handle hapus/simpan file storage
 
 class AuthController extends Controller
 {
-public function register(Request $request)
+    public function register(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
@@ -39,6 +40,7 @@ public function register(Request $request)
             'user' => $user
         ], 201);
     }
+
     public function login(Request $request)
     {
         $request->validate([
@@ -60,6 +62,46 @@ public function register(Request $request)
             'success' => true,
             'message' => 'Login berhasil',
             'user' => $user
+        ], 200);
+    }
+
+    /**
+     * METHOD BARU: Menangani upload dan pembaruan foto profil user
+     * Menjamin data foto tersimpan permanen di database
+     */
+    public function updateProfilePicture(Request $request, $id)
+    {
+        // Validasi input file gambar
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        // Cari user berdasarkan ID yang dikirim dari Flutter
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User tidak ditemukan!'
+            ], 404);
+        }
+
+        // Hapus foto profil lama dari server jika sebelumnya sudah pernah upload
+        if ($user->profile_picture) {
+            Storage::disk('public')->delete($user->profile_picture);
+        }
+
+        // Simpan file baru ke dalam folder: storage/app/public/profile_pictures
+        $path = $request->file('image')->store('profile_pictures', 'public');
+
+        // Simpan path file baru tersebut ke dalam database tabel users kolom profile_picture
+        $user->profile_picture = $path;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Foto profil berhasil diperbarui!',
+            // Kembalikan URL absolut agar Flutter Web/Mobile bisa langsung merender lewat Image.network
+            'profile_picture_url' => asset('storage/' . $path)
         ], 200);
     }
 }
